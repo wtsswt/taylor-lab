@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>泰勒逼近 · 可视化实验室</title>
+<style>
+  :root{
+    --bg:#0b0e14;
+    --panel:#11161f;
+    --panel2:#161c27;
+    --line:#1e2634;
+    --line2:#28323f;
+    --tx:#c9d4e5;
+    --tx2:#7b8a9f;
+    --tx3:#4a5668;
+    --f:#46e0c8;
+    --p:#ffb44d;
+    --err:#ff6b81;
+    --acc:#7aa2ff;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --serif: "Times New Roman", "Songti SC", Georgia, serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg);
+    color:var(--tx);
+    font-family:var(--sans);
+    font-size:13px;
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background:
+      radial-gradient(900px 500px at 78% -10%, rgba(70,224,200,.06), transparent 60%),
+      radial-gradient(700px 400px at 10% 110%, rgba(122,162,255,.05), transparent 60%);
+    pointer-events:none;
+  }
+
+  .shell{
+    position:relative;
+    display:grid;
+    grid-template-columns:296px 1fr;
+    height:100vh;
+  }
+
+  /* ---------- 侧栏 ---------- */
+  aside{
+    border-right:1px solid var(--line);
+    background:rgba(17,22,31,.72);
+    backdrop-filter:blur(12px);
+    overflow-y:auto;
+    padding:18px 16px 28px;
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+  }
+  aside::-webkit-scrollbar{width:7px}
+  aside::-webkit-scrollbar-thumb{background:#232c3a;border-radius:4px}
+
+  .brand{display:flex;align-items:center;gap:11px}
+  .brand svg{flex:none}
+  .brand h1{
+    font-size:15px; font-weight:600; letter-spacing:.02em; color:#e6edf7;
+  }
+  .brand p{
+    font-family:var(--mono); font-size:9.5px; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--tx3); margin-top:2px;
+  }
+
+  .sec{
+    display:flex; align-items:baseline; justify-content:space-between;
+    font-family:var(--mono); font-size:10px; letter-spacing:.13em;
+    text-transform:uppercase; color:var(--tx3);
+    margin-bottom:9px;
+  }
+  .sec b{
+    font-family:var(--mono); font-size:12px; font-weight:500;
+    letter-spacing:0; text-transform:none; color:var(--f);
+  }
+
+  /* 函数卡片 */
+  .funcs{display:flex;flex-direction:column;gap:5px}
+  .fcard{
+    display:flex; align-items:center; gap:10px;
+    padding:8px 10px;
+    border:1px solid transparent;
+    border-radius:8px;
+    background:transparent;
+    cursor:pointer;
+    text-align:left;
+    color:var(--tx2);
+    transition:background .15s, border-color .15s, color .15s;
+    font-family:inherit;
+    width:100%;
+  }
+  .fcard:hover{background:var(--panel2); color:var(--tx)}
+  .fcard.on{
+    background:linear-gradient(90deg, rgba(70,224,200,.11), rgba(70,224,200,.02));
+    border-color:rgba(70,224,200,.35);
+    color:#e6edf7;
+  }
+  .fcard .sym{
+    font-family:var(--serif); font-style:italic; font-size:15px;
+    min-width:56px; color:var(--tx);
+    letter-spacing:.01em;
+  }
+  .fcard.on .sym{color:var(--f)}
+  .fcard .nm{
+    font-size:10.5px; color:var(--tx3); flex:1;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .fcard.on .nm{color:var(--tx2)}
+  .fcard .dot{
+    width:5px;height:5px;border-radius:50%;flex:none;
+    background:transparent; transition:background .15s;
+  }
+  .fcard.on .dot{background:var(--f); box-shadow:0 0 8px var(--f)}
+
+  /* 滑块 */
+  input[type=range]{
+    -webkit-appearance:none; appearance:none;
+    width:100%; height:20px; background:transparent; cursor:pointer;
+    display:block;
+  }
+  input[type=range]::-webkit-slider-runnable-track{
+    height:3px; background:#212b3a; border-radius:3px;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; appearance:none;
+    width:13px; height:13px; border-radius:50%;
+    background:var(--f); margin-top:-5px;
+    box-shadow:0 0 0 3px rgba(70,224,200,.14);
+    transition:box-shadow .15s;
+  }
+  input[type=range]:hover::-webkit-slider-thumb{box-shadow:0 0 0 5px rgba(70,224,200,.18)}
+  #n::-webkit-slider-thumb{background:var(--p); box-shadow:0 0 0 3px rgba(255,180,77,.14)}
+  #n:hover::-webkit-slider-thumb{box-shadow:0 0 0 5px rgba(255,180,77,.18)}
+  #alpha::-webkit-slider-thumb{background:var(--acc); box-shadow:0 0 0 3px rgba(122,162,255,.14)}
+
+  .chips{display:flex; gap:5px; margin-top:8px; flex-wrap:wrap}
+  .chip{
+    font-family:var(--mono); font-size:10.5px;
+    padding:3px 8px; border-radius:5px;
+    border:1px solid var(--line2); background:transparent;
+    color:var(--tx2); cursor:pointer; transition:.13s;
+  }
+  .chip:hover{border-color:var(--f); color:var(--f)}
+  .chip.on{background:rgba(70,224,200,.12); border-color:rgba(70,224,200,.4); color:var(--f)}
+
+  /* 统计 */
+  .stats{
+    display:grid; grid-template-columns:1fr 1fr; gap:1px;
+    background:var(--line); border:1px solid var(--line);
+    border-radius:8px; overflow:hidden;
+  }
+  .stat{background:var(--panel); padding:9px 10px}
+  .stat .k{
+    font-family:var(--mono); font-size:9px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--tx3); margin-bottom:4px;
+  }
+  .stat .v{
+    font-family:var(--mono); font-size:12.5px; color:var(--tx);
+    font-variant-numeric:tabular-nums;
+  }
+  .stat .v small{font-size:9.5px; color:var(--tx3); margin-left:1px}
+
+  .note{
+    font-size:10.5px; line-height:1.65; color:var(--tx3);
+    border-left:2px solid var(--line2); padding-left:9px;
+  }
+
+  /* ---------- 主区 ---------- */
+  main{
+    display:grid;
+    grid-template-rows:minmax(240px,1fr) 122px auto;
+    min-width:0;
+    overflow:hidden;
+  }
+  .canvasWrap{
+    position:relative;
+    min-height:0;
+    touch-action:none;
+    cursor:crosshair;
+  }
+  .canvasWrap.grabbing{cursor:grabbing}
+  canvas{display:block; width:100%; height:100%}
+
+  .legend{
+    position:absolute; top:14px; right:16px;
+    display:flex; flex-direction:column; gap:7px;
+    pointer-events:none;
+    font-family:var(--mono); font-size:10.5px; color:var(--tx2);
+  }
+  .legend div{display:flex; align-items:center; gap:7px; white-space:nowrap}
+  .legend i{width:16px; height:2px; display:block; border-radius:1px}
+  .legend .lf{background:var(--f); box-shadow:0 0 6px rgba(70,224,200,.5)}
+  .legend .lp{
+    background:repeating-linear-gradient(90deg, var(--p) 0 4px, transparent 4px 7px);
+  }
+
+  .hint{
+    position:absolute; left:50px; top:3px;
+    font-family:var(--mono); font-size:9.5px; color:#3f4c5f;
+    pointer-events:none; letter-spacing:.02em;
+  }
+  .hint kbd{
+    font-family:inherit; border:1px solid var(--line2); border-radius:3px;
+    padding:0 4px; color:var(--tx2);
+  }
+
+  /* tooltip */
+  #tip{
+    position:absolute; pointer-events:none; opacity:0;
+    background:rgba(13,18,26,.94);
+    border:1px solid var(--line2);
+    border-radius:7px;
+    padding:8px 10px;
+    font-family:var(--mono); font-size:10.5px;
+    line-height:1.75;
+    white-space:nowrap;
+    transition:opacity .1s;
+    z-index:5;
+    backdrop-filter:blur(6px);
+    box-shadow:0 8px 24px rgba(0,0,0,.45);
+  }
+  #tip.show{opacity:1}
+  #tip .row{display:flex; justify-content:space-between; gap:14px}
+  #tip .lbl{color:var(--tx3)}
+  #tip .vf{color:var(--f)}
+  #tip .vp{color:var(--p)}
+  #tip .ve{color:var(--err)}
+
+  /* 误差图 */
+  .errWrap{
+    position:relative;
+    border-top:1px solid var(--line);
+    background:rgba(9,12,18,.5);
+    min-height:0;
+  }
+  .errTag{
+    position:absolute; left:16px; top:8px;
+    font-family:var(--mono); font-size:9.5px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--tx3);
+    pointer-events:none;
+  }
+
+  /* 表达式 */
+  .expr{
+    border-top:1px solid var(--line);
+    background:rgba(17,22,31,.6);
+    padding:15px 22px 17px;
+    max-height:190px;
+    overflow-y:auto;
+  }
+  .expr::-webkit-scrollbar{width:7px}
+  .expr::-webkit-scrollbar-thumb{background:#232c3a;border-radius:4px}
+  .exprTop{
+    display:flex; align-items:baseline; gap:12px; margin-bottom:9px;
+    flex-wrap:wrap;
+  }
+  .exprTop .t{
+    font-family:var(--mono); font-size:9.5px; letter-spacing:.13em;
+    text-transform:uppercase; color:var(--tx3);
+  }
+  .exprTop .badge{
+    font-family:var(--mono); font-size:10px;
+    padding:1px 7px; border-radius:4px;
+    background:rgba(255,180,77,.1); color:var(--p);
+    border:1px solid rgba(255,180,77,.22);
+  }
+  .formula{
+    font-family:var(--serif); font-style:italic;
+    font-size:17.5px; line-height:2.1; color:#dde6f2;
+    word-break:break-word;
+  }
+  .formula sup{font-size:.62em; font-style:normal; vertical-align:super}
+  .formula sub{font-size:.62em; font-style:normal; vertical-align:sub}
+  .formula .pn{color:var(--p); font-style:normal}
+
+  /* 小屏 */
+  @media (max-width:920px){
+    body{overflow:auto}
+    .shell{grid-template-columns:1fr; height:auto; min-height:100vh}
+    aside{
+      border-right:none; border-bottom:1px solid var(--line);
+      flex-direction:column; gap:15px; padding:14px;
+      overflow:visible;
+    }
+    .funcs{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px}
+    .fcard{width:auto; min-width:0; padding:9px 9px; overflow:hidden}
+    .fcard .sym{min-width:0; font-size:14px}
+    .fcard .nm{display:none}
+    .fcard .dot{display:none}
+    main{grid-template-rows:52vh 92px auto; height:auto}
+    .expr{max-height:none}
+    .hint{font-size:9px; line-height:1.5; right:12px; left:12px}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <aside>
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+        <rect x=".75" y=".75" width="28.5" height="28.5" rx="8" stroke="#28323f"/>
+        <path d="M5 22c4-1 5.5-3 7-7s4-9 12-10" stroke="#46e0c8" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M5 22c3-.5 5-2 6.5-5s4.5-7 12.5-8.5" stroke="#ffb44d" stroke-width="1.4"
+              stroke-linecap="round" stroke-dasharray="2.5 3" opacity=".9"/>
+      </svg>
+      <div>
+        <h1>泰勒逼近</h1>
+        <p>Taylor · Visual Lab</p>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec"><span>基本展开</span><span style="color:var(--tx3)">6</span></div>
+      <div class="funcs" id="funcs"></div>
+    </div>
+
+    <div>
+      <div class="sec"><span>展开点 x₀</span><b id="x0v">0</b></div>
+      <input type="range" id="x0" min="-3" max="3" step="0.1" value="0">
+      <div class="chips" id="xchips"></div>
+    </div>
+
+    <div>
+      <div class="sec"><span>阶数 n</span><b id="nv">4</b></div>
+      <input type="range" id="n" min="0" max="12" step="1" value="4">
+      <div class="note" style="margin-top:8px">n 次多项式，含 n+1 项。图上点击可移动展开点。</div>
+    </div>
+
+    <div id="alphaWrap" style="display:none">
+      <div class="sec"><span>参数 α</span><b id="av">0.5</b></div>
+      <input type="range" id="alpha" min="-2" max="3" step="0.1" value="0.5">
+    </div>
+
+    <div>
+      <div class="sec"><span>此刻的误差</span></div>
+      <div class="stats">
+        <div class="stat"><div class="k">最大绝对误差</div><div class="v" id="sMax">—</div></div>
+        <div class="stat"><div class="k">高精度区间</div><div class="v" id="sCov">—</div></div>
+        <div class="stat"><div class="k">收敛半径 R</div><div class="v" id="sR">—</div></div>
+        <div class="stat"><div class="k">1e−6 精度半宽</div><div class="v" id="sHalf">—</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="canvasWrap" id="wrap">
+      <canvas id="plot"></canvas>
+      <div class="legend">
+        <div><i class="lf"></i>f(x)</div>
+        <div><i class="lp"></i>P<sub>n</sub>(x)</div>
+      </div>
+      <div class="hint">滚轮缩放 · 拖动平移 · 点击设 x₀ · <kbd>←</kbd><kbd>→</kbd> 调阶数 · 双击复位</div>
+      <div id="tip"></div>
+    </div>
+
+    <div class="errWrap" id="errWrap">
+      <canvas id="errc"></canvas>
+      <div class="errTag">绝对误差 |f(x) − Pₙ(x)| · 对数刻度</div>
+    </div>
+
+    <div class="expr">
+      <div class="exprTop">
+        <span class="t">展开式</span>
+        <span class="badge" id="badge">x₀ = 0, n = 4</span>
+        <span class="t" id="stdHint" style="margin-left:auto; text-transform:none; letter-spacing:0"></span>
+      </div>
+      <div class="formula" id="formula"></div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= 数学核心 ================= */
+  const FACT = [1];
+  for(let i=1;i<=25;i++) FACT[i] = FACT[i-1]*i;
+
+  // 广义二项式系数 C(a,k)
+  function binom(a,k){
+    let r = 1;
+    for(let i=0;i<k;i++) r *= (a-i)/(i+1);
+    return r;
+  }
+
+  const FUNCS = [
+    {
+      id:'exp', sym:'e<sup>x</sup>', name:'指数函数', key:'exp',
+      std:'1 + x + x²/2! + x³/3! + ⋯',
+      x0min:-3, x0max:3, def:0,
+      f:(x)=>Math.exp(x),
+      coef:(k,x0)=>Math.exp(x0)/FACT[k],
+      radius:()=>Infinity,
+      inDom:()=>true
+    },
+    {
+      id:'sin', sym:'sin x', name:'正弦', key:'sin',
+      std:'x − x³/3! + x⁵/5! − ⋯',
+      x0min:-3, x0max:3, def:0,
+      f:(x)=>Math.sin(x),
+      coef:(k,x0)=>Math.sin(x0 + k*Math.PI/2)/FACT[k],
+      radius:()=>Infinity,
+      inDom:()=>true
+    },
+    {
+      id:'cos', sym:'cos x', name:'余弦', key:'cos',
+      std:'1 − x²/2! + x⁴/4! − ⋯',
+      x0min:-3, x0max:3, def:0,
+      f:(x)=>Math.cos(x),
+      coef:(k,x0)=>Math.cos(x0 + k*Math.PI/2)/FACT[k],
+      radius:()=>Infinity,
+      inDom:()=>true
+    },
+    {
+      id:'ln', sym:'ln(1+x)', name:'对数', key:'ln',
+      std:'x − x²/2 + x³/3 − ⋯',
+      x0min:-0.9, x0max:3, def:0,
+      f:(x)=>Math.log1p(x),
+      coef:(k,x0)=> k===0 ? Math.log1p(x0)
+                    : Math.pow(-1,k-1)/(k*Math.pow(1+x0,k)),
+      radius:(x0)=>1+x0,
+      inDom:(x)=>x>-1
+    },
+    {
+      id:'pow', sym:'(1+x)<sup>α</sup>', name:'二项式幂', key:'pow',
+      std:'1 + αx + α(α−1)x²/2! + ⋯',
+      x0min:-0.9, x0max:3, def:0,
+      alpha:true,
+      f:(x,al)=>Math.pow(1+x,al),
+      coef:(k,x0,al)=>binom(al,k)*Math.pow(1+x0, al-k),
+      radius:(x0)=>1+x0,
+      inDom:(x)=>x>-1
+    },
+    {
+      id:'inv', sym:'1/(1−x)', name:'几何级数', key:'inv',
+      std:'1 + x + x² + x³ + ⋯',
+      x0min:-3, x0max:0.9, def:0,
+      f:(x)=>1/(1-x),
+      coef:(k,x0)=>1/Math.pow(1-x0, k+1),
+      radius:(x0)=>Math.abs(1-x0),
+      inDom:(x)=>Math.abs(x-1)>1e-7
+    }
+  ];
+
+  /* ================= 状态 ================= */
+  const st = { fi:0, x0:0, n:4, alpha:0.5 };
+  let view = { xMin:-4.5, xMax:4.5 };
+
+  // 当前渲染缓存
+  let cur = null;
+
+  const el = (id)=>document.getElementById(id);
+  const plot = el('plot'), errc = el('errc'), wrap = el('wrap'), tip = el('tip');
+
+  /* ================= 工具 ================= */
+  function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+
+  function fmtNum(v){
+    if(!Number.isFinite(v)) return '—';
+    const a = Math.abs(v);
+    if(a===0) return '0';
+    if(a>=1e4 || a<1e-4){
+      const m = v.toExponential(2);
+      return m.replace('e','×10^');
+    }
+    if(a>=100) return v.toFixed(1);
+    if(a>=1)   return v.toFixed(3).replace(/0+$/,'').replace(/\.$/,'');
+    return v.toFixed(5).replace(/0+$/,'').replace(/\.$/,'');
+  }
+
+  // HTML 数字（上标）
+  function htmlNum(v){
+    if(!Number.isFinite(v)) return '—';
+    const a = Math.abs(v);
+    if(a>=1e4 || a<1e-4){
+      const [m,e] = v.toExponential(2).split('e');
+      const mm = m.replace(/\.?0+$/,'');
+      return mm + '×10<sup>' + e.replace('+','') + '</sup>';
+    }
+    if(a>=100) return v.toFixed(1).replace(/\.0$/,'');
+    if(a>=1)   return String(parseFloat(v.toFixed(4)));
+    return String(parseFloat(v.toFixed(6)));
+  }
+
+  // 好看的刻度步长
+  function niceStep(span, target){
+    const raw = span/target;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const norm = raw/mag;
+    let s;
+    if(norm <= 1) s = 1;
+    else if(norm <= 2) s = 2;
+    else if(norm <= 5) s = 5;
+    else s = 10;
+    return s*mag;
+  }
+
+  function fmtTick(v, step){
+    if(Math.abs(v) < step*1e-6) return '0';
+    const d = Math.max(0, -Math.floor(Math.log10(step))+ (step<1?1:0));
+    if(Math.abs(v) >= 10000 || (Math.abs(v)<0.001 && v!==0))
+      return v.toExponential(0).replace('e','e');
+    return parseFloat(v.toFixed(Math.min(4,d))).toString();
+  }
+
+  /* ================= 构建侧栏 ================= */
+  function buildFuncs(){
+    const box = el('funcs');
+    FUNCS.forEach((fn,i)=>{
+      const b = document.createElement('button');
+      b.className = 'fcard' + (i===0?' on':'');
+      b.innerHTML = '<span class="sym">'+fn.sym+'</span><span class="nm">'+fn.name+'</span><span class="dot"></span>';
+      b.onclick = ()=>selectFunc(i);
+      b.dataset.i = i;
+      box.appendChild(b);
+    });
+  }
+
+  function buildChips(){
+    const box = el('xchips');
+    [-2,-1,0,1,2].forEach(v=>{
+      const b = document.createElement('button');
+      b.className = 'chip';
+      b.textContent = 'x₀ = ' + v;
+      b.onclick = ()=>{
+        setX0(v);
+      };
+      b.dataset.v = v;
+      box.appendChild(b);
+    });
+  }
+
+  function syncChips(){
+    document.querySelectorAll('#xchips .chip').forEach(c=>{
+      c.classList.toggle('on', Math.abs(parseFloat(c.dataset.v) - st.x0) < 1e-9);
+    });
+  }
+
+  function reflectUI(){
+    const fn = FUNCS[st.fi];
+    document.querySelectorAll('.fcard').forEach((c,j)=>c.classList.toggle('on', j===st.fi));
+    const sx = el('x0');
+    sx.min = fn.x0min; sx.max = fn.x0max;
+    sx.value = st.x0;
+    el('x0v').textContent = trimNum(st.x0);
+    el('n').value = st.n;
+    el('nv').textContent = String(st.n);
+    el('alpha').value = st.alpha;
+    el('av').textContent = st.alpha.toFixed(2);
+    el('alphaWrap').style.display = fn.alpha ? '' : 'none';
+    el('stdHint').textContent = '麦克劳林：' + fn.std;
+    syncChips();
+  }
+
+  function selectFunc(i){
+    st.fi = i;
+    const fn = FUNCS[i];
+    st.x0 = clamp(st.x0, fn.x0min, fn.x0max);
+    reflectUI();
+    view = { xMin:-4.5, xMax:4.5 };
+    render();
+    syncHash();
+  }
+
+  function setX0(v){
+    const fn = FUNCS[st.fi];
+    st.x0 = clamp(v, fn.x0min, fn.x0max);
+    el('x0').value = st.x0;
+    el('x0v').textContent = trimNum(st.x0);
+    syncChips();
+    render();
+    syncHash();
+  }
+
+  function syncHash(){
+    const p = new URLSearchParams();
+    p.set('f', FUNCS[st.fi].id);
+    p.set('x0', trimNum(st.x0));
+    p.set('n', String(st.n));
+    if(FUNCS[st.fi].alpha) p.set('a', st.alpha.toFixed(2));
+    try{ history.replaceState(null, '', '#' + p.toString()); }catch(e){}
+  }
+
+  function applyHash(){
+    const h = location.hash.replace(/^#/, '');
+    if(!h) return;
+    const p = new URLSearchParams(h);
+    const idx = FUNCS.findIndex(f=>f.id === p.get('f'));
+    if(idx >= 0) st.fi = idx;
+    const fn = FUNCS[st.fi];
+    const n = parseInt(p.get('n'), 10);
+    if(Number.isFinite(n)) st.n = clamp(n, 0, 12);
+    const a = parseFloat(p.get('a'));
+    if(Number.isFinite(a)) st.alpha = clamp(a, -2, 3);
+    const x0 = parseFloat(p.get('x0'));
+    st.x0 = clamp(Number.isFinite(x0) ? x0 : fn.def, fn.x0min, fn.x0max);
+  }
+
+  /* ================= 画布适配 ================= */
+  function fit(cv){
+    const r = cv.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(1, Math.round(r.width));
+    const h = Math.max(1, Math.round(r.height));
+    if(cv.width !== Math.round(w*dpr) || cv.height !== Math.round(h*dpr)){
+      cv.width = Math.round(w*dpr);
+      cv.height = Math.round(h*dpr);
+    }
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+    return {ctx,w,h};
+  }
+
+  /* ================= 主渲染 ================= */
+  function render(light){
+    const fn = FUNCS[st.fi];
+    const x0 = st.x0, n = st.n, al = st.alpha;
+
+    // 系数
+    const coefs = [];
+    for(let k=0;k<=n;k++){
+      let c = fn.coef(k, x0, al);
+      if(!Number.isFinite(c)) c = NaN;
+      coefs.push(c);
+    }
+
+    // 多项式（Horner）
+    const poly = (x)=>{
+      const t = x - x0;
+      let p = coefs[n];
+      for(let k=n-1;k>=0;k--) p = p*t + coefs[k];
+      return p;
+    };
+
+    // y 范围（按 f 稳健估计，剔除奇点附近极端值）
+    const yv = [];
+    for(let i=0;i<=600;i++){
+      const x = view.xMin + (view.xMax-view.xMin)*i/600;
+      if(!fn.inDom(x)) continue;
+      const v = fn.f(x, al);
+      if(Number.isFinite(v)) yv.push(v);
+    }
+    let yMin, yMax;
+    if(yv.length < 4){
+      yMin = -2; yMax = 2;
+    }else{
+      yv.sort((a,b)=>a-b);
+      const lo = yv[Math.floor(yv.length*0.01)];
+      const hi = yv[Math.ceil(yv.length*0.99)-1];
+      let a = lo, b = hi;
+      if(!Number.isFinite(a) || !Number.isFinite(b)){ a=-2; b=2; }
+      if(b-a < 1e-9){ a -= 1; b += 1; }
+      const sp = b - a;
+      yMin = a - sp*0.13;
+      yMax = b + sp*0.13;
+      // 全正 / 全负时向 0 侧收紧，避免大片无意义留白
+      if(a > 0 && a < sp*0.25) yMin = -sp*0.04;
+      if(b < 0 && -b < sp*0.25) yMax = sp*0.04;
+    }
+
+    const R = fn.radius(x0);
+    cur = { fn, x0, n, al, coefs, poly, view:{...view}, yMin, yMax, R };
+
+    drawPlot();
+    drawErr();
+    if(!light) updateMeta();
+  }
+
+  /* ---------- 主图 ---------- */
+  let hover = { on:false, px:0, py:0, x:0 };
+
+  function drawPlot(){
+    const {ctx,w,h} = fit(plot);
+    if(!cur) return;
+    const {fn,x0,al,poly,yMin,yMax} = cur;
+    const vw = cur.view;
+    const PADL = 44, PADR = 16, PADT = 18, PADB = 24;
+    const iw = w - PADL - PADR, ih = h - PADT - PADB;
+
+    const X = (x)=> PADL + (x - vw.xMin)/(vw.xMax - vw.xMin)*iw;
+    const Y = (y)=> PADT + (yMax - y)/(yMax - yMin)*ih;
+
+    ctx.save();
+    ctx.translate(PADL, PADT);
+    ctx.beginPath();
+    ctx.rect(0,0,iw,ih);
+    ctx.clip();
+
+    // 网格
+    const stepX = niceStep(vw.xMax-vw.xMin, 8);
+    const stepY = niceStep(yMax-yMin, 7);
+
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#182130';
+    ctx.beginPath();
+    for(let x = Math.ceil(vw.xMin/stepX)*stepX; x <= vw.xMax; x += stepX){
+      const px = Math.round(X(x)-PADL)+0.5;
+      ctx.moveTo(px,0); ctx.lineTo(px,ih);
+    }
+    for(let y = Math.ceil(yMin/stepY)*stepY; y <= yMax; y += stepY){
+      const py = Math.round(Y(y)-PADT)+0.5;
+      ctx.moveTo(0,py); ctx.lineTo(iw,py);
+    }
+    ctx.stroke();
+
+    // 轴
+    ctx.strokeStyle = '#2b3646';
+    ctx.beginPath();
+    if(yMin < 0 && yMax > 0){
+      const py = Math.round(Y(0)-PADT)+0.5;
+      ctx.moveTo(0,py); ctx.lineTo(iw,py);
+    }
+    if(vw.xMin < 0 && vw.xMax > 0){
+      const px = Math.round(X(0)-PADL)+0.5;
+      ctx.moveTo(px,0); ctx.lineTo(px,ih);
+    }
+    ctx.stroke();
+
+    // 收敛边界
+    if(Number.isFinite(cur.R) && cur.R > 1e-6){
+      ctx.setLineDash([3,5]);
+      ctx.strokeStyle = 'rgba(255,107,129,.45)';
+      ctx.lineWidth = 1;
+      [x0 - cur.R, x0 + cur.R].forEach(bx=>{
+        if(bx > vw.xMin && bx < vw.xMax){
+          const px = Math.round(X(bx)-PADL)+0.5;
+          ctx.beginPath(); ctx.moveTo(px,0); ctx.lineTo(px,ih); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = 'rgba(255,107,129,.6)';
+          ctx.font = '9px ui-monospace, Menlo, monospace';
+          ctx.textAlign = 'left';
+          ctx.fillText('R', px+4, 11);
+          ctx.setLineDash([3,5]);
+        }
+      });
+      ctx.setLineDash([]);
+    }
+
+    // 采样
+    const N = Math.min(1400, Math.max(400, Math.round(iw*1.4)));
+    const xs = [], fv = [], pv = [];
+    for(let i=0;i<=N;i++){
+      const x = vw.xMin + (vw.xMax-vw.xMin)*i/N;
+      xs.push(x);
+      fv.push(fn.inDom(x) ? fn.f(x, al) : NaN);
+      pv.push(poly(x));
+    }
+
+    // f 与 P 之间的缝隙
+    const back = [];
+    for(let i=0;i<=N;i++){
+      const a = fv[i], b = pv[i];
+      back.push(Number.isFinite(a) && Number.isFinite(b) && Math.abs(Y(a)-Y(b)) < ih*2.2 ? i : -1);
+    }
+    let seg = [];
+    const flushGap = ()=>{
+      if(seg.length < 2) { seg = []; return; }
+      ctx.beginPath();
+      seg.forEach((i,idx)=>{
+        const px = X(xs[i])-PADL, py = Y(fv[i])-PADT;
+        idx===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+      });
+      for(let k=seg.length-1;k>=0;k--){
+        ctx.lineTo(X(xs[seg[k]])-PADL, Y(pv[seg[k]])-PADT);
+      }
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255,180,77,.075)';
+      ctx.fill();
+      seg = [];
+    };
+    for(let i=0;i<=N;i++){
+      if(back[i] >= 0) seg.push(i); else flushGap();
+    }
+    flushGap();
+
+    // 绘制曲线（分段）
+    function strokeCurve(getY, color, width, dash){
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      if(dash) ctx.setLineDash(dash);
+      ctx.beginPath();
+      let started = false;
+      for(let i=0;i<=N;i++){
+        const y = getY(i);
+        if(!Number.isFinite(y)){ started = false; continue; }
+        const px = X(xs[i])-PADL, py = Y(y)-PADT;
+        if(py < -ih*3 || py > ih*4){ started = false; continue; }
+        if(!started){ ctx.moveTo(px,py); started = true; }
+        else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 光晕
+    ctx.save();
+    ctx.shadowColor = 'rgba(70,224,200,.5)';
+    ctx.shadowBlur = 12;
+    strokeCurve(i=>fv[i], 'rgba(70,224,200,.55)', 2.2, null);
+    ctx.restore();
+
+    strokeCurve(i=>fv[i], '#46e0c8', 2.1, null);
+    strokeCurve(i=>pv[i], '#ffb44d', 1.8, [5,4]);
+
+    ctx.restore();
+
+    // 展开点
+    const fx0 = fn.inDom(x0) ? fn.f(x0, al) : NaN;
+    if(x0 > vw.xMin && x0 < vw.xMax){
+      const px = X(x0), pyBase = PADT + ih;
+      ctx.save();
+      ctx.setLineDash([2,4]);
+      ctx.strokeStyle = 'rgba(122,162,255,.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(px, PADT); ctx.lineTo(px, pyBase); ctx.stroke();
+      ctx.restore();
+
+      if(Number.isFinite(fx0)){
+        const py = Y(fx0);
+        if(py > PADT-2 && py < pyBase+2){
+          ctx.beginPath();
+          ctx.arc(px, py, 5.5, 0, Math.PI*2);
+          ctx.fillStyle = 'rgba(122,162,255,.16)';
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(px, py, 2.8, 0, Math.PI*2);
+          ctx.fillStyle = '#7aa2ff';
+          ctx.fill();
+        }
+      }
+      ctx.font = '10px ui-monospace, Menlo, monospace';
+      ctx.fillStyle = 'rgba(122,162,255,.85)';
+      ctx.textAlign = 'center';
+      ctx.fillText('x₀', px, PADT - 6);
+    }
+
+    // 刻度文字
+    ctx.font = '9.5px ui-monospace, Menlo, monospace';
+    ctx.fillStyle = '#5d6c82';
+    ctx.textAlign = 'center';
+    for(let x = Math.ceil(vw.xMin/stepX)*stepX; x <= vw.xMax; x += stepX){
+      ctx.fillText(fmtTick(x, stepX), X(x), h-8);
+    }
+    ctx.textAlign = 'right';
+    for(let y = Math.ceil(yMin/stepY)*stepY; y <= yMax; y += stepY){
+      const py = Y(y);
+      if(py < PADT+4 || py > PADT+ih-2) continue;
+      ctx.fillText(fmtTick(y, stepY), PADL-8, py+3.4);
+    }
+
+    // 函数水印
+    ctx.save();
+    ctx.font = 'italic 44px "Times New Roman", Georgia, serif';
+    ctx.fillStyle = 'rgba(201,212,229,.035)';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(fn.key, w-20, h-30);
+    ctx.restore();
+
+    // 悬停
+    if(hover.on){
+      const px = hover.px, py = hover.py;
+      if(px > PADL && px < PADL+iw){
+        const xv = vw.xMin + (px-PADL)/iw*(vw.xMax-vw.xMin);
+        const a = fn.inDom(xv) ? fn.f(xv, al) : NaN;
+        const b = cur.poly(xv);
+        hover.x = xv;
+
+        ctx.save();
+        ctx.strokeStyle = 'rgba(201,212,229,.22)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2,3]);
+        ctx.beginPath();
+        ctx.moveTo(px, PADT); ctx.lineTo(px, PADT+ih);
+        ctx.stroke();
+        ctx.restore();
+
+        if(Number.isFinite(a)){
+          const fy = Y(a);
+          if(fy>PADT-4 && fy<PADT+ih+4){
+            ctx.beginPath(); ctx.arc(px, fy, 3, 0, Math.PI*2);
+            ctx.fillStyle = '#46e0c8'; ctx.fill();
+          }
+        }
+        if(Number.isFinite(b)){
+          const ppy = Y(b);
+          if(ppy>PADT-4 && ppy<PADT+ih+4){
+            ctx.beginPath(); ctx.arc(px, ppy, 2.6, 0, Math.PI*2);
+            ctx.fillStyle = '#ffb44d'; ctx.fill();
+          }
+        }
+        updateTip(xv, a, b, px, py, w);
+      }else{
+        tip.classList.remove('show');
+      }
+    }else{
+      tip.classList.remove('show');
+    }
+  }
+
+  function updateTip(xv, a, b, px, py, w){
+    const err = (Number.isFinite(a) && Number.isFinite(b)) ? Math.abs(a-b) : NaN;
+    tip.innerHTML =
+      '<div class="row"><span class="lbl">x</span><span>'+xv.toFixed(4)+'</span></div>'+
+      '<div class="row"><span class="lbl">f(x)</span><span class="vf">'+fmtNum(a)+'</span></div>'+
+      '<div class="row"><span class="lbl">Pₙ(x)</span><span class="vp">'+fmtNum(b)+'</span></div>'+
+      '<div class="row"><span class="lbl">误差</span><span class="ve">'+fmtNum(err)+'</span></div>';
+    tip.classList.add('show');
+    const tw = tip.offsetWidth || 150;
+    const th = tip.offsetHeight || 80;
+    let left = px + 16;
+    if(left + tw > w - 8) left = px - tw - 16;
+    let top = py - th/2;
+    const wrapH = wrap.clientHeight;
+    top = clamp(top, 8, wrapH - th - 8);
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+  }
+
+  /* ---------- 误差图 ---------- */
+  function drawErr(){
+    const {ctx,w,h} = fit(errc);
+    if(!cur) return;
+    const {fn,al,poly} = cur;
+    const vw = cur.view;
+    const PADL = 44, PADR = 16, PADT = 16, PADB = 14;
+    const iw = w - PADL - PADR, ih = h - PADT - PADB;
+    const LMAX = 3, LMIN = -12;
+
+    const X = (x)=> PADL + (x - vw.xMin)/(vw.xMax - vw.xMin)*iw;
+    const LY = (l)=> PADT + (LMAX - clamp(l,LMIN,LMAX))/(LMAX-LMIN)*ih;
+
+    // 网格
+    ctx.strokeStyle = '#182130';
+    ctx.lineWidth = 1;
+    ctx.textAlign = 'right';
+    for(let e=LMAX; e>=LMIN; e-=3){
+      const py = Math.round(LY(e))+0.5;
+      ctx.beginPath(); ctx.moveTo(PADL, py); ctx.lineTo(PADL+iw, py); ctx.stroke();
+    }
+
+    const N = Math.min(1400, Math.max(400, Math.round(iw*1.4)));
+    const pts = [];
+    for(let i=0;i<=N;i++){
+      const x = vw.xMin + (vw.xMax-vw.xMin)*i/N;
+      const a = fn.inDom(x) ? fn.f(x, al) : NaN;
+      const b = poly(x);
+      if(!Number.isFinite(a)){ pts.push({x, l:NaN}); continue; }
+      let l;
+      if(!Number.isFinite(b)) l = LMAX;
+      else{
+        const d = Math.abs(a-b);
+        l = d <= 0 ? LMIN : Math.log10(d);
+      }
+      pts.push({x, l: clamp(l, LMIN, LMAX)});
+    }
+
+    // 切成连续段（定义域外断开）
+    const segs = [];
+    let acc = [];
+    for(const p of pts){
+      if(Number.isFinite(p.l)) acc.push(p);
+      else { if(acc.length > 1) segs.push(acc); acc = []; }
+    }
+    if(acc.length > 1) segs.push(acc);
+
+    const g = ctx.createLinearGradient(0,PADT,0,PADT+ih);
+    g.addColorStop(0,'rgba(255,107,129,.30)');
+    g.addColorStop(1,'rgba(255,107,129,.02)');
+
+    // 面积
+    segs.forEach(seg=>{
+      ctx.beginPath();
+      ctx.moveTo(X(seg[0].x), PADT+ih);
+      seg.forEach(p=>ctx.lineTo(X(p.x), LY(p.l)));
+      ctx.lineTo(X(seg[seg.length-1].x), PADT+ih);
+      ctx.closePath();
+      ctx.fillStyle = g;
+      ctx.fill();
+    });
+
+    // 线
+    ctx.beginPath();
+    segs.forEach(seg=>{
+      seg.forEach((p,i)=>{
+        const py = LY(p.l);
+        i===0 ? ctx.moveTo(X(p.x),py) : ctx.lineTo(X(p.x),py);
+      });
+    });
+    ctx.strokeStyle = '#ff6b81';
+    ctx.lineWidth = 1.4;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    // 参照线 1e-6
+    const py6 = LY(-6);
+    ctx.save();
+    ctx.setLineDash([4,4]);
+    ctx.strokeStyle = 'rgba(201,212,229,.16)';
+    ctx.beginPath(); ctx.moveTo(PADL, Math.round(py6)+0.5); ctx.lineTo(PADL+iw, Math.round(py6)+0.5); ctx.stroke();
+    ctx.restore();
+
+    // 刻度标签最后画，避免被面积填充盖住
+    ctx.font = '9px ui-monospace, Menlo, monospace';
+    ctx.fillStyle = '#586880';
+    ctx.textAlign = 'right';
+    for(let e=LMAX; e>=LMIN; e-=3){
+      ctx.fillText('1e'+e, PADL-8, Math.round(LY(e))+3);
+    }
+  }
+
+  /* ---------- 面板数值 ---------- */
+  function updateMeta(){
+    const {fn,x0,n,al,coefs,poly,R} = cur;
+
+    // 最大误差 / 高精度占比
+    let maxE = 0, good = 0, total = 0;
+    for(let i=0;i<=800;i++){
+      const x = cur.view.xMin + (cur.view.xMax-cur.view.xMin)*i/800;
+      if(!fn.inDom(x)) continue;
+      const a = fn.f(x, al), b = poly(x);
+      if(!Number.isFinite(a) || !Number.isFinite(b)) continue;
+      const d = Math.abs(a-b);
+      total++;
+      if(d > maxE) maxE = d;
+      if(d < 1e-3) good++;
+    }
+
+    el('sMax').innerHTML = htmlNum(maxE);
+    el('sCov').innerHTML = total ? Math.round(good/total*100)+'<small>%</small>' : '—';
+    el('sR').innerHTML = Number.isFinite(R) ? htmlNum(R) : '<span style="color:var(--f)">∞</span>';
+
+    // 1e−6 精度半宽：从 x₀ 向两侧连续满足 |f−P| < 1e−6 的距离
+    const errAt = (x)=>{
+      if(!fn.inDom(x)) return NaN;
+      const a = fn.f(x, al), b = poly(x);
+      if(!Number.isFinite(a) || !Number.isFinite(b)) return NaN;
+      return Math.abs(a-b);
+    };
+    let half = 0;
+    for(const dir of [-1, 1]){
+      const lim = dir > 0 ? (cur.view.xMax - x0) : (x0 - cur.view.xMin);
+      if(!(lim > 0)) continue;
+      const step = lim/200;
+      let d = 0, goodD = 0;
+      while(d <= lim && errAt(x0 + dir*d) < 1e-6){ goodD = d; d += step; }
+      if(goodD < lim && d <= lim){
+        let lo = goodD, hi = d;
+        for(let i=0;i<10;i++){
+          const mid = (lo+hi)/2;
+          if(errAt(x0 + dir*mid) < 1e-6) lo = mid; else hi = mid;
+        }
+        goodD = lo;
+      }
+      half = Math.max(half, goodD);
+    }
+    const fullSpan = cur.view.xMax - cur.view.xMin;
+    el('sHalf').innerHTML = half >= fullSpan*0.49
+      ? '<span style="color:var(--f)">&gt; 半窗</span>'
+      : '±' + htmlNum(half);
+
+    // 表达式
+    el('badge').textContent = 'x₀ = ' + trimNum(x0) + ', n = ' + n;
+    el('formula').innerHTML = buildFormula(coefs, x0, n);
+  }
+
+  function trimNum(v){
+    const s = v.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+    return s === '-0' ? '0' : s;
+  }
+
+  function shiftBase(x0, k){
+    if(Math.abs(x0) < 1e-9){
+      return k===1 ? 'x' : 'x<sup>'+k+'</sup>';
+    }
+    const s = x0 < 0 ? '+' + htmlNum(Math.abs(x0)) : '−' + htmlNum(x0);
+    return k===1 ? '(x'+s+')' : '(x'+s+')<sup>'+k+'</sup>';
+  }
+
+  function buildFormula(coefs, x0, n){
+    let out = '';
+    let first = true;
+    for(let k=0;k<=n;k++){
+      const c = coefs[k];
+      if(!Number.isFinite(c) || Math.abs(c) < 1e-14) continue;
+      const neg = c < 0;
+      const av = Math.abs(c);
+      let term;
+      if(k===0){
+        term = htmlNum(av);
+      }else{
+        const head = Math.abs(av-1) < 1e-12 ? '' : htmlNum(av);
+        term = head + shiftBase(x0, k);
+      }
+      if(first){
+        out += (neg ? '−' : '') + term;
+        first = false;
+      }else{
+        out += (neg ? ' − ' : ' + ') + term;
+      }
+    }
+    if(first) out = '0';
+    return '<span class="pn">P<sub>'+n+'</sub>(x)</span> = ' + out;
+  }
+
+  /* ================= 交互 ================= */
+  let metaTimer = null;
+  function lightRender(){
+    render(true);
+    clearTimeout(metaTimer);
+    metaTimer = setTimeout(()=>render(), 170);
+  }
+  function bindRange(id, key, after){
+    const e = el(id);
+    e.addEventListener('input', ()=>{
+      const v = parseFloat(e.value);
+      st[key] = v;
+      if(id === 'x0'){ syncChips(); el('x0v').textContent = trimNum(v); }
+      if(id === 'n') el('nv').textContent = String(v);
+      if(id === 'alpha') el('av').textContent = v.toFixed(2);
+      if(after) after();
+      render();
+      syncHash();
+    });
+  }
+
+  function bindInteractions(){
+    let dragging = false, moved = false, startX = 0, startY = 0, startView = null, lastPX = 0;
+
+    wrap.addEventListener('pointerdown', (e)=>{
+      dragging = true; moved = false;
+      startX = e.clientX; startY = e.clientY;
+      startView = {...view};
+      wrap.classList.add('grabbing');
+      wrap.setPointerCapture(e.pointerId);
+    });
+
+    wrap.addEventListener('pointermove', (e)=>{
+      const r = plot.getBoundingClientRect();
+      const px = e.clientX - r.left;
+      const py = e.clientY - r.top;
+
+      if(dragging){
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        if(Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+        if(moved){
+          const iw = r.width - 44 - 16;
+          const span = startView.xMax - startView.xMin;
+          const shift = -dx / iw * span;
+          view.xMin = startView.xMin + shift;
+          view.xMax = startView.xMax + shift;
+          lightRender();
+          return;
+        }
+      }
+
+      hover.on = true;
+      hover.px = px;
+      hover.py = py;
+      drawPlot();
+    });
+
+    wrap.addEventListener('pointerup', (e)=>{
+      const wasMoved = moved;
+      dragging = false;
+      wrap.classList.remove('grabbing');
+
+      if(!wasMoved){
+        // 点击设置展开点
+        const r = plot.getBoundingClientRect();
+        const px = e.clientX - r.left;
+        const iw = r.width - 44 - 16;
+        if(px > 44){
+          const xv = view.xMin + (px-44)/iw*(view.xMax-view.xMin);
+          const snapped = Math.round(xv*10)/10;
+          setX0(snapped);
+        }
+      }else{
+        clearTimeout(metaTimer);
+        render();
+      }
+    });
+
+    wrap.addEventListener('pointerleave', ()=>{
+      hover.on = false;
+      tip.classList.remove('show');
+      drawPlot();
+    });
+
+    wrap.addEventListener('wheel', (e)=>{
+      e.preventDefault();
+      const r = plot.getBoundingClientRect();
+      const px = e.clientX - r.left;
+      const iw = r.width - 44 - 16;
+      const frac = clamp((px-44)/iw, 0, 1);
+      const center = view.xMin + frac*(view.xMax-view.xMin);
+
+      const f = e.deltaY > 0 ? 1.18 : 1/1.18;
+      let span = (view.xMax-view.xMin)*f;
+      span = clamp(span, 0.2, 80);
+      const l = center - frac*span;
+      view.xMin = l;
+      view.xMax = l + span;
+      lightRender();
+    }, {passive:false});
+
+    wrap.addEventListener('dblclick', ()=>{
+      view = { xMin:-4.5, xMax:4.5 };
+      render();
+    });
+
+    window.addEventListener('keydown', (e)=>{
+      if(e.key === 'ArrowLeft' || e.key === 'ArrowRight'){
+        const d = e.key === 'ArrowRight' ? 1 : -1;
+        st.n = clamp(st.n + d, 0, 12);
+        el('n').value = st.n;
+        el('nv').textContent = String(st.n);
+        render();
+        e.preventDefault();
+      }
+    });
+
+    const ro = new ResizeObserver(()=>{ if(cur) render(); });
+    ro.observe(wrap);
+    ro.observe(el('errWrap'));
+  }
+
+  /* ================= 启动 ================= */
+  buildFuncs();
+  buildChips();
+  applyHash();
+  reflectUI();
+
+  bindRange('x0','x0');
+  bindRange('n','n');
+  bindRange('alpha','alpha');
+
+  bindInteractions();
+  render();
+  syncHash();
+
+  setTimeout(render, 60);
+})();
+</script>
+</body>
+</html>
