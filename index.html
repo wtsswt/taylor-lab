@@ -392,6 +392,30 @@
     .formula{font-size:14.5px; line-height:2.1}
     .canvasWrap{max-height:none; min-height:120px}
   }
+
+  /* ---------- 署名 ---------- */
+  .site-footer{
+    flex:none;
+    padding:7px 16px calc(7px + env(safe-area-inset-bottom, 0px));
+    text-align:center;
+    font-size:11px;
+    line-height:1.5;
+    letter-spacing:.02em;
+    color:var(--tx2);
+    background:var(--bg);
+    border-top:1px solid var(--line);
+  }
+  /* 桌面端：满屏 flex 布局，让 shell 让出署名这一行（高度沿用 --vh/100dvh 的取值，iPad 上不倒退） */
+  @media (min-width:701px){
+    body{
+      height:100vh;
+      height:calc(var(--vh, 1vh) * 100);
+      height:100dvh;
+      display:flex;
+      flex-direction:column;
+    }
+    .shell{flex:1 1 auto; height:auto; min-height:0}
+  }
 </style>
 </head>
 <body>
@@ -1592,5 +1616,7 @@
   setTimeout(render, 60);
 })();
 </script>
+
+<footer class="site-footer">© 2026 swt · AI 辅助生成</footer>
 </body>
 </html>
