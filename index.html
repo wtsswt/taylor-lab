@@ -178,14 +178,16 @@
 
   /* ---------- 主区 ---------- */
   main{
-    display:grid;
-    grid-template-rows:minmax(240px,1fr) 122px auto;
+    display:flex;
+    flex-direction:column;
     min-width:0;
+    min-height:0;
     overflow:hidden;
   }
   .canvasWrap{
     position:relative;
-    min-height:0;
+    flex:1 1 auto;
+    min-height:200px;
     touch-action:none;
     cursor:crosshair;
   }
@@ -206,8 +208,8 @@
   }
 
   .hint{
-    position:absolute; left:50px; top:7px;
-    font-family:var(--mono); font-size:9.5px; color:#3f4c5f;
+    position:absolute; left:50px; top:10px;
+    font-family:var(--mono); font-size:9.5px; color:#4a5a70; line-height:1.6;
     pointer-events:none; letter-spacing:.02em;
   }
   .hint kbd{
@@ -215,10 +217,30 @@
     padding:0 4px; color:var(--tx2);
   }
 
+  /* 缩放按钮 */
+  .zoombar{
+    position:absolute; right:12px; bottom:12px;
+    display:flex; flex-direction:column; gap:5px; z-index:4;
+  }
+  .zoombar button{
+    width:30px; height:30px; border-radius:7px;
+    border:1px solid var(--line2);
+    background:rgba(17,22,31,.85);
+    color:var(--tx2); font-size:14px; line-height:1;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    backdrop-filter:blur(6px);
+    transition:border-color .13s, color .13s, transform .1s;
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .zoombar button:hover{border-color:var(--f); color:var(--f)}
+  .zoombar button:active{transform:scale(.93)}
+
   /* tooltip */
   #tip{
     position:absolute; pointer-events:none; opacity:0;
-    background:rgba(13,18,26,.94);
+    background:rgba(13,18,26,.95);
     border:1px solid var(--line2);
     border-radius:7px;
     padding:8px 10px;
@@ -240,12 +262,13 @@
   /* 误差图 */
   .errWrap{
     position:relative;
+    flex:none;
+    height:122px;
     border-top:1px solid var(--line);
     background:rgba(9,12,18,.5);
-    min-height:0;
   }
   .errTag{
-    position:absolute; left:16px; top:8px;
+    position:absolute; left:52px; top:7px;
     font-family:var(--mono); font-size:9.5px; letter-spacing:.1em;
     text-transform:uppercase; color:var(--tx3);
     pointer-events:none;
@@ -253,16 +276,17 @@
 
   /* 表达式 */
   .expr{
+    flex:none;
     border-top:1px solid var(--line);
-    background:rgba(17,22,31,.6);
-    padding:15px 22px 17px;
-    max-height:190px;
+    background:rgba(17,22,31,.62);
+    padding:13px 22px 15px;
+    max-height:230px;
     overflow-y:auto;
   }
   .expr::-webkit-scrollbar{width:7px}
   .expr::-webkit-scrollbar-thumb{background:#232c3a;border-radius:4px}
   .exprTop{
-    display:flex; align-items:baseline; gap:12px; margin-bottom:9px;
+    display:flex; align-items:baseline; gap:12px; margin-bottom:6px;
     flex-wrap:wrap;
   }
   .exprTop .t{
@@ -277,30 +301,66 @@
   }
   .formula{
     font-family:var(--serif); font-style:italic;
-    font-size:17.5px; line-height:2.1; color:#dde6f2;
+    font-size:18px; line-height:2.55; color:#dde6f2;
     word-break:break-word;
   }
-  .formula sup{font-size:.62em; font-style:normal; vertical-align:super}
-  .formula sub{font-size:.62em; font-style:normal; vertical-align:sub}
+  .formula sup{font-size:.6em; font-style:normal; vertical-align:super; line-height:0}
+  .formula sub{font-size:.6em; font-style:normal; vertical-align:sub; line-height:0}
   .formula .pn{color:var(--p); font-style:normal}
 
-  /* 小屏 */
-  @media (max-width:920px){
+  /* 真分数 */
+  .fr{
+    display:inline-flex; flex-direction:column;
+    vertical-align:-0.36em;
+    text-align:center; font-size:.87em; line-height:1.06;
+    margin:0 3px 0 1px;
+  }
+  .fr .fn{padding:0 3px; border-bottom:1px solid rgba(221,230,242,.5)}
+  .fr .fd{padding:0 3px}
+  .fr sup{font-size:.8em}
+
+  /* 中等宽度 */
+  @media (max-width:1180px){
+    .shell{grid-template-columns:256px 1fr}
+    aside{padding:16px 13px 24px}
+  }
+
+  /* 手机 */
+  @media (max-width:700px){
     body{overflow:auto}
     .shell{grid-template-columns:1fr; height:auto; min-height:100vh}
     aside{
       border-right:none; border-bottom:1px solid var(--line);
-      flex-direction:column; gap:15px; padding:14px;
-      overflow:visible;
+      flex-direction:column; gap:13px; padding:13px; overflow:visible;
     }
+    .brand svg{width:26px;height:26px}
+    .brand h1{font-size:14px}
     .funcs{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px}
-    .fcard{width:auto; min-width:0; padding:9px 9px; overflow:hidden}
-    .fcard .sym{min-width:0; font-size:14px}
-    .fcard .nm{display:none}
-    .fcard .dot{display:none}
-    main{grid-template-rows:52vh 92px auto; height:auto}
-    .expr{max-height:none}
-    .hint{font-size:9px; line-height:1.5; right:12px; left:12px}
+    .fcard{width:auto; min-width:0; padding:8px 6px; overflow:hidden}
+    .fcard .sym{min-width:0; font-size:13.5px}
+    .fcard .nm,.fcard .dot{display:none}
+    .stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .stat{padding:7px 5px}
+    .stat .k{font-size:7.5px; letter-spacing:.04em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+    .stat .v{font-size:11px}
+    .note{display:none}
+    main{height:auto; overflow:visible}
+    .canvasWrap{flex:none; height:47vh; min-height:240px}
+    .errWrap{height:92px}
+    .expr{max-height:none; padding:12px 14px 14px}
+    .formula{font-size:15.5px; line-height:2.6}
+    .hint{display:none}
+    .legend{font-size:9.5px; top:10px; right:10px}
+    .zoombar{right:8px; bottom:8px}
+    .zoombar button{width:33px; height:33px; font-size:16px}
+  }
+
+  /* 矮屏（横屏手机等） */
+  @media (max-height:520px) and (min-width:701px){
+    .errWrap{height:84px}
+    .expr{max-height:110px; padding:9px 16px 11px}
+    .formula{font-size:15px; line-height:2.4}
+    .canvasWrap{min-height:150px}
   }
 </style>
 </head>
@@ -334,8 +394,8 @@
 
     <div>
       <div class="sec"><span>阶数 n</span><b id="nv">4</b></div>
-      <input type="range" id="n" min="0" max="12" step="1" value="4">
-      <div class="note" style="margin-top:8px">n 次多项式，含 n+1 项。图上点击可移动展开点。</div>
+      <input type="range" id="n" min="0" max="25" step="1" value="4">
+      <div class="note" style="margin-top:8px">n ≤ 10 逐阶；再往后步长 2 → 4 → 8，最高 80 阶。图上点击可移动展开点。</div>
     </div>
 
     <div id="alphaWrap" style="display:none">
@@ -357,9 +417,14 @@
   <main>
     <div class="canvasWrap" id="wrap">
       <canvas id="plot"></canvas>
+      <div class="zoombar">
+        <button id="zin" title="放大" aria-label="放大">+</button>
+        <button id="zout" title="缩小" aria-label="缩小">−</button>
+        <button id="zreset" title="复位视窗" aria-label="复位">⟲</button>
+      </div>
       <div class="legend">
-        <div><i class="lf"></i>f(x)</div>
-        <div><i class="lp"></i>P<sub>n</sub>(x)</div>
+        <div><i class="lf"></i><span>f(x)</span></div>
+        <div><i class="lp"></i><span>P<sub>n</sub>(x)</span></div>
       </div>
       <div class="hint">滚轮缩放 · 拖动平移 · 点击设 x₀ · <kbd>←</kbd><kbd>→</kbd> 调阶数 · 双击复位</div>
       <div id="tip"></div>
@@ -388,7 +453,7 @@
 
   /* ================= 数学核心 ================= */
   const FACT = [1];
-  for(let i=1;i<=25;i++) FACT[i] = FACT[i-1]*i;
+  for(let i=1;i<=171;i++) FACT[i] = FACT[i-1]*i;
 
   // 广义二项式系数 C(a,k)
   function binom(a,k){
@@ -401,7 +466,7 @@
     {
       id:'exp', sym:'e<sup>x</sup>', name:'指数函数', key:'exp',
       std:'1 + x + x²/2! + x³/3! + ⋯',
-      x0min:-3, x0max:3, def:0,
+      x0min:-3, x0max:3, def:0, view:{xMin:-4, xMax:4},
       f:(x)=>Math.exp(x),
       coef:(k,x0)=>Math.exp(x0)/FACT[k],
       radius:()=>Infinity,
@@ -410,7 +475,7 @@
     {
       id:'sin', sym:'sin x', name:'正弦', key:'sin',
       std:'x − x³/3! + x⁵/5! − ⋯',
-      x0min:-3, x0max:3, def:0,
+      x0min:-3, x0max:3, def:0, view:{xMin:-7.5, xMax:7.5},
       f:(x)=>Math.sin(x),
       coef:(k,x0)=>Math.sin(x0 + k*Math.PI/2)/FACT[k],
       radius:()=>Infinity,
@@ -419,7 +484,7 @@
     {
       id:'cos', sym:'cos x', name:'余弦', key:'cos',
       std:'1 − x²/2! + x⁴/4! − ⋯',
-      x0min:-3, x0max:3, def:0,
+      x0min:-3, x0max:3, def:0, view:{xMin:-7.5, xMax:7.5},
       f:(x)=>Math.cos(x),
       coef:(k,x0)=>Math.cos(x0 + k*Math.PI/2)/FACT[k],
       radius:()=>Infinity,
@@ -428,7 +493,7 @@
     {
       id:'ln', sym:'ln(1+x)', name:'对数', key:'ln',
       std:'x − x²/2 + x³/3 − ⋯',
-      x0min:-0.9, x0max:3, def:0,
+      x0min:-0.9, x0max:3, def:0, view:{xMin:-1.15, xMax:8},
       f:(x)=>Math.log1p(x),
       coef:(k,x0)=> k===0 ? Math.log1p(x0)
                     : Math.pow(-1,k-1)/(k*Math.pow(1+x0,k)),
@@ -438,7 +503,7 @@
     {
       id:'pow', sym:'(1+x)<sup>α</sup>', name:'二项式幂', key:'pow',
       std:'1 + αx + α(α−1)x²/2! + ⋯',
-      x0min:-0.9, x0max:3, def:0,
+      x0min:-0.9, x0max:3, def:0, view:{xMin:-1.15, xMax:5},
       alpha:true,
       f:(x,al)=>Math.pow(1+x,al),
       coef:(k,x0,al)=>binom(al,k)*Math.pow(1+x0, al-k),
@@ -448,7 +513,7 @@
     {
       id:'inv', sym:'1/(1−x)', name:'几何级数', key:'inv',
       std:'1 + x + x² + x³ + ⋯',
-      x0min:-3, x0max:0.9, def:0,
+      x0min:-3, x0max:0.9, def:0, view:{xMin:-4, xMax:3.6},
       f:(x)=>1/(1-x),
       coef:(k,x0)=>1/Math.pow(1-x0, k+1),
       radius:(x0)=>Math.abs(1-x0),
@@ -457,8 +522,24 @@
   ];
 
   /* ================= 状态 ================= */
+  // 阶数序列：前 10 阶逐阶，之后步长 2 → 4 → 8
+  const NSEQ = (()=>{
+    const a = [];
+    for(let i=0;i<=10;i++) a.push(i);
+    for(let i=12;i<=20;i+=2) a.push(i);
+    for(let i=24;i<=40;i+=4) a.push(i);
+    for(let i=48;i<=80;i+=8) a.push(i);
+    return a;
+  })();
+  function nIndex(n){
+    let best = 0;
+    for(let i=1;i<NSEQ.length;i++)
+      if(Math.abs(NSEQ[i]-n) < Math.abs(NSEQ[best]-n)) best = i;
+    return best;
+  }
+
   const st = { fi:0, x0:0, n:4, alpha:0.5 };
-  let view = { xMin:-4.5, xMax:4.5 };
+  let view = { xMin:FUNCS[0].view.xMin, xMax:FUNCS[0].view.xMax };
 
   // 当前渲染缓存
   let cur = null;
@@ -486,6 +567,7 @@
   function htmlNum(v){
     if(!Number.isFinite(v)) return '—';
     const a = Math.abs(v);
+    if(a === 0) return '0';
     if(a>=1e4 || a<1e-4){
       const [m,e] = v.toExponential(2).split('e');
       const mm = m.replace(/\.?0+$/,'');
@@ -550,6 +632,12 @@
     });
   }
 
+  function resetView(silent){
+    const v = FUNCS[st.fi].view;
+    view = { xMin:v.xMin, xMax:v.xMax };
+    if(!silent) render();
+  }
+
   function reflectUI(){
     const fn = FUNCS[st.fi];
     document.querySelectorAll('.fcard').forEach((c,j)=>c.classList.toggle('on', j===st.fi));
@@ -557,7 +645,7 @@
     sx.min = fn.x0min; sx.max = fn.x0max;
     sx.value = st.x0;
     el('x0v').textContent = trimNum(st.x0);
-    el('n').value = st.n;
+    el('n').value = nIndex(st.n);
     el('nv').textContent = String(st.n);
     el('alpha').value = st.alpha;
     el('av').textContent = st.alpha.toFixed(2);
@@ -571,7 +659,7 @@
     const fn = FUNCS[i];
     st.x0 = clamp(st.x0, fn.x0min, fn.x0max);
     reflectUI();
-    view = { xMin:-4.5, xMax:4.5 };
+    resetView(true);
     render();
     syncHash();
   }
@@ -603,7 +691,7 @@
     if(idx >= 0) st.fi = idx;
     const fn = FUNCS[st.fi];
     const n = parseInt(p.get('n'), 10);
-    if(Number.isFinite(n)) st.n = clamp(n, 0, 12);
+    if(Number.isFinite(n)) st.n = NSEQ[nIndex(clamp(n, 0, 80))];
     const a = parseFloat(p.get('a'));
     if(Number.isFinite(a)) st.alpha = clamp(a, -2, 3);
     const x0 = parseFloat(p.get('x0'));
@@ -765,7 +853,7 @@
     const back = [];
     for(let i=0;i<=N;i++){
       const a = fv[i], b = pv[i];
-      back.push(Number.isFinite(a) && Number.isFinite(b) && Math.abs(Y(a)-Y(b)) < ih*2.2 ? i : -1);
+      back.push(Number.isFinite(a) && Number.isFinite(b) && Math.abs(Y(a)-Y(b)) < ih*0.9 ? i : -1);
     }
     let seg = [];
     const flushGap = ()=>{
@@ -779,7 +867,7 @@
         ctx.lineTo(X(xs[seg[k]])-PADL, Y(pv[seg[k]])-PADT);
       }
       ctx.closePath();
-      ctx.fillStyle = 'rgba(255,180,77,.075)';
+      ctx.fillStyle = 'rgba(255,180,77,.055)';
       ctx.fill();
       seg = [];
     };
@@ -867,13 +955,15 @@
     }
 
     // 函数水印
-    ctx.save();
-    ctx.font = 'italic 44px "Times New Roman", Georgia, serif';
-    ctx.fillStyle = 'rgba(201,212,229,.035)';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillText(fn.key, w-20, h-30);
-    ctx.restore();
+    if(w > 900){
+      ctx.save();
+      ctx.font = 'italic 44px "Times New Roman", Georgia, serif';
+      ctx.fillStyle = 'rgba(201,212,229,.035)';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(fn.key, w-20, h-30);
+      ctx.restore();
+    }
 
     // 悬停
     if(hover.on){
@@ -1079,7 +1169,7 @@
 
     // 表达式
     el('badge').textContent = 'x₀ = ' + trimNum(x0) + ', n = ' + n;
-    el('formula').innerHTML = buildFormula(coefs, x0, n);
+    el('formula').innerHTML = buildFormula(coefs, x0, n, fn.id);
   }
 
   function trimNum(v){
@@ -1095,20 +1185,82 @@
     return k===1 ? '(x'+s+')' : '(x'+s+')<sup>'+k+'</sup>';
   }
 
-  function buildFormula(coefs, x0, n){
+  // 连分数有理逼近：能写成简洁分数的就写分数
+  function toFrac(v, maxDen){
+    if(!Number.isFinite(v)) return null;
+    const sg = v < 0 ? -1 : 1;
+    const a = Math.abs(v);
+    if(a < 1e-13) return {p:0, q:1};
+    if(Math.abs(a - Math.round(a)) < 1e-12) return {p:Math.round(a)*sg, q:1};
+
+    let hm1 = 1, hm2 = 0, km1 = 0, km2 = 1;
+    let b = a;
+    for(let i=0;i<30;i++){
+      const ai = Math.floor(b);
+      const h = ai*hm1 + hm2;
+      const k = ai*km1 + km2;
+      if(k > maxDen) break;
+      if(k > 0 && Math.abs(a - h/k) < 1e-10*Math.max(1,a)) return {p:h*sg, q:k};
+      hm2 = hm1; hm1 = h;
+      km2 = km1; km1 = k;
+      const fr = b - ai;
+      if(fr < 1e-13) break;
+      b = 1/fr;
+    }
+    if(km1 > 0 && Math.abs(a - hm1/km1) < 1e-9*Math.max(1,a)) return {p:hm1*sg, q:km1};
+    return null;
+  }
+
+  // 正数 → 真分数 HTML
+  function fracHTML(p, q){
+    if(q === 1) return String(p);
+    return '<span class="fr"><span class="fn">'+p+'</span><span class="fd">'+q+'</span></span>';
+  }
+
+  function fracRawHTML(numHTML, denHTML){
+    return '<span class="fr"><span class="fn">'+numHTML+'</span><span class="fd">'+denHTML+'</span></span>';
+  }
+
+  function coefText(av){
+    const f = toFrac(av, 50000);
+    if(f) return fracHTML(Math.abs(f.p), f.q);
+    return htmlNum(av);
+  }
+
+  function argText(b){
+    if(Math.abs(b - Math.round(b)) < 1e-9) return String(Math.round(b));
+    return String(parseFloat(b.toFixed(3)));
+  }
+
+  function buildFormula(coefs, x0, n, fid){
     let out = '';
     let first = true;
     for(let k=0;k<=n;k++){
       const c = coefs[k];
-      if(!Number.isFinite(c) || Math.abs(c) < 1e-14) continue;
+      if(!Number.isFinite(c) || Math.abs(c) < 1e-13) continue;
+
+      // ln(1+x) 的常数项是无理数，写成 ln(1+x₀)
+      if(fid === 'ln' && k === 0){
+        out += (first ? '' : ' + ') + 'ln&thinsp;' + argText(1 + x0);
+        first = false;
+        continue;
+      }
+
       const neg = c < 0;
       const av = Math.abs(c);
       let term;
-      if(k===0){
-        term = htmlNum(av);
+      if(k === 0){
+        term = coefText(av);
       }else{
-        const head = Math.abs(av-1) < 1e-12 ? '' : htmlNum(av);
-        term = head + shiftBase(x0, k);
+        const fk = FACT[k];
+        const invFact = k >= 2 && Number.isFinite(fk) && Math.abs(av*fk - 1) < 1e-10;
+        if(invFact){
+          // 系数恰为 1/k!：写成标准教材形式 xᵏ/k!
+          term = fracRawHTML(shiftBase(x0, k), k + '!');
+        }else{
+          const head = Math.abs(av - 1) < 1e-12 ? '' : coefText(av);
+          term = head + shiftBase(x0, k);
+        }
       }
       if(first){
         out += (neg ? '−' : '') + term;
@@ -1132,10 +1284,14 @@
     const e = el(id);
     e.addEventListener('input', ()=>{
       const v = parseFloat(e.value);
-      st[key] = v;
-      if(id === 'x0'){ syncChips(); el('x0v').textContent = trimNum(v); }
-      if(id === 'n') el('nv').textContent = String(v);
-      if(id === 'alpha') el('av').textContent = v.toFixed(2);
+      if(id === 'n'){
+        st.n = NSEQ[clamp(Math.round(v), 0, NSEQ.length-1)];
+        el('nv').textContent = String(st.n);
+      }else{
+        st[key] = v;
+        if(id === 'x0'){ syncChips(); el('x0v').textContent = trimNum(st.x0); }
+        if(id === 'alpha') el('av').textContent = st.alpha.toFixed(2);
+      }
       if(after) after();
       render();
       syncHash();
@@ -1143,17 +1299,63 @@
   }
 
   function bindInteractions(){
-    let dragging = false, moved = false, startX = 0, startY = 0, startView = null, lastPX = 0;
+    let dragging = false, moved = false, startX = 0, startY = 0, startView = null;
+    let pinchOn = false;
+    const pts = new Map();
+    let pinchDist0 = 0, pinchView0 = null, pinchFrac = 0.5;
+
+    function ptList(){
+      const a = [];
+      pts.forEach(v=>a.push(v));
+      return a;
+    }
+    function pinchDistance(){
+      const a = ptList();
+      if(a.length < 2) return 0;
+      return Math.hypot(a[0].x-a[1].x, a[0].y-a[1].y);
+    }
 
     wrap.addEventListener('pointerdown', (e)=>{
+      if(e.target && e.target.closest && e.target.closest('.zoombar')) return;
+
+      pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+
+      if(pts.size >= 2){
+        pinchOn = true; dragging = false; moved = true;
+        pinchDist0 = pinchDistance();
+        pinchView0 = {...view};
+        const r = plot.getBoundingClientRect();
+        const a = ptList();
+        const midX = (a[0].x + a[1].x)/2;
+        const iw = r.width - 44 - 16;
+        pinchFrac = clamp((midX - r.left - 44)/iw, 0, 1);
+        return;
+      }
+
       dragging = true; moved = false;
       startX = e.clientX; startY = e.clientY;
       startView = {...view};
       wrap.classList.add('grabbing');
-      wrap.setPointerCapture(e.pointerId);
+      try{ wrap.setPointerCapture(e.pointerId); }catch(err){}
     });
 
     wrap.addEventListener('pointermove', (e)=>{
+      if(pts.has(e.pointerId)) pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+
+      // 双指缩放
+      if(pts.size >= 2 && pinchView0){
+        const d = pinchDistance();
+        if(d > 2 && pinchDist0 > 2){
+          let span = (pinchView0.xMax - pinchView0.xMin) * (pinchDist0 / d);
+          span = clamp(span, 0.02, 400);
+          const anchor = pinchView0.xMin + pinchFrac*(pinchView0.xMax - pinchView0.xMin);
+          view.xMin = anchor - pinchFrac*span;
+          view.xMax = view.xMin + span;
+          lightRender();
+        }
+        return;
+      }
+
       const r = plot.getBoundingClientRect();
       const px = e.clientX - r.left;
       const py = e.clientY - r.top;
@@ -1179,26 +1381,47 @@
       drawPlot();
     });
 
-    wrap.addEventListener('pointerup', (e)=>{
-      const wasMoved = moved;
-      dragging = false;
+    function endPointer(e){
+      pts.delete(e.pointerId);
+      if(pts.size < 2){ pinchDist0 = 0; pinchView0 = null; }
+      if(pts.size > 0) return;
+
+      const wasMoved = moved, wasPinch = pinchOn;
+      dragging = false; pinchOn = false;
       wrap.classList.remove('grabbing');
 
+      if(wasPinch){ clearTimeout(metaTimer); render(); return; }
+
       if(!wasMoved){
-        // 点击设置展开点
+        // 单击设置展开点
         const r = plot.getBoundingClientRect();
         const px = e.clientX - r.left;
         const iw = r.width - 44 - 16;
-        if(px > 44){
+        if(px > 44 && px < r.width - 16){
           const xv = view.xMin + (px-44)/iw*(view.xMax-view.xMin);
-          const snapped = Math.round(xv*10)/10;
-          setX0(snapped);
+          setX0(Math.round(xv*10)/10);
         }
       }else{
         clearTimeout(metaTimer);
         render();
       }
-    });
+    }
+
+    wrap.addEventListener('pointerup', endPointer);
+    wrap.addEventListener('pointercancel', endPointer);
+
+    // 缩放按钮
+    function zoomBy(f){
+      const span0 = view.xMax - view.xMin;
+      const span = clamp(span0*f, 0.02, 400);
+      const c = (view.xMin + view.xMax)/2;
+      view.xMin = c - span/2;
+      view.xMax = c + span/2;
+      render();
+    }
+    el('zin').addEventListener('click', ()=>zoomBy(1/1.6));
+    el('zout').addEventListener('click', ()=>zoomBy(1.6));
+    el('zreset').addEventListener('click', ()=>resetView());
 
     wrap.addEventListener('pointerleave', ()=>{
       hover.on = false;
@@ -1223,18 +1446,17 @@
       lightRender();
     }, {passive:false});
 
-    wrap.addEventListener('dblclick', ()=>{
-      view = { xMin:-4.5, xMax:4.5 };
-      render();
-    });
+    wrap.addEventListener('dblclick', ()=>{ resetView(); });
 
     window.addEventListener('keydown', (e)=>{
       if(e.key === 'ArrowLeft' || e.key === 'ArrowRight'){
         const d = e.key === 'ArrowRight' ? 1 : -1;
-        st.n = clamp(st.n + d, 0, 12);
-        el('n').value = st.n;
+        const i = clamp(nIndex(st.n) + d, 0, NSEQ.length-1);
+        st.n = NSEQ[i];
+        el('n').value = i;
         el('nv').textContent = String(st.n);
         render();
+        syncHash();
         e.preventDefault();
       }
     });
@@ -1248,6 +1470,7 @@
   buildFuncs();
   buildChips();
   applyHash();
+  resetView(true);
   reflectUI();
 
   bindRange('x0','x0');
