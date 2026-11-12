@@ -70,6 +70,11 @@
 
   .brand{display:flex;align-items:center;gap:11px}
   .brand svg{flex:none}
+  .ver{
+    display:inline-block; margin-left:7px; padding:0 4px;
+    font-size:8.5px; letter-spacing:.06em; color:#4b5a6e;
+    border:1px solid #242e3c; border-radius:3px; vertical-align:1px;
+  }
   .brand h1{
     font-size:15px; font-weight:600; letter-spacing:.02em; color:#e6edf7;
   }
@@ -287,6 +292,7 @@
     background:rgba(17,22,31,.62);
     padding:13px 22px 15px;
     max-height:230px;
+    min-height:0;
     overflow-y:auto;
     overscroll-behavior:contain;
   }
@@ -321,6 +327,8 @@
   .formula sup{font-size:.6em; font-style:normal; vertical-align:super; line-height:0}
   .formula sub{font-size:.6em; font-style:normal; vertical-align:sub; line-height:0}
   .formula .pn{color:var(--p); font-style:normal}
+  .formula .fx{font-style:normal}
+  .term{white-space:nowrap}
 
   /* 真分数 */
   .fr{
@@ -337,8 +345,8 @@
   @media (max-width:1180px){
     .shell{grid-template-columns:236px 1fr}
     aside{padding:15px 12px 22px; gap:16px}
-    .canvasWrap{max-height:44vh; min-height:170px}
-    .errWrap{height:100px}
+    .canvasWrap{max-height:37vh; min-height:160px}
+    .errWrap{height:94px}
     .expr{flex:1 1 auto; max-height:none; padding:11px 18px 13px}
     .formula{font-size:16.5px; line-height:2.35}
     .hint{display:none}
@@ -357,7 +365,7 @@
     .brand svg{width:26px;height:26px}
     .brand h1{font-size:14px}
     .funcs{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px}
-    .fcard{width:auto; min-width:0; padding:8px 6px; overflow:hidden}
+    .fcard{width:auto; min-width:0; padding:6px 5px; overflow:hidden}
     .fcard .sym{min-width:0; font-size:13.5px}
     .fcard .nm,.fcard .dot{display:none}
     .stats{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -365,11 +373,12 @@
     .stat .k{font-size:7.5px; letter-spacing:.04em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
     .stat .v{font-size:11px}
     .note{display:none}
+    aside{gap:10px; padding:11px 13px}
     main{height:auto; overflow:visible}
-    .canvasWrap{flex:none; height:37vh; min-height:180px; max-height:none}
-    .errWrap{height:92px}
-    .expr{max-height:none; padding:12px 14px 14px}
-    .formula{font-size:15.5px; line-height:2.6}
+    .canvasWrap{flex:none; height:23vh; min-height:140px; max-height:none}
+    .errWrap{height:66px}
+    .expr{flex:none; max-height:none; padding:11px 14px 13px}
+    .formula{font-size:15px; line-height:2.35}
     .hint{display:none}
     .legend{font-size:9.5px; top:10px; right:10px}
     .zoombar{right:8px; bottom:8px}
@@ -398,7 +407,7 @@
       </svg>
       <div>
         <h1>泰勒逼近</h1>
-        <p>Taylor · Visual Lab</p>
+        <p>Taylor · Visual Lab<span class="ver">r3</span></p>
       </div>
     </div>
 
@@ -1059,11 +1068,14 @@
     const X = (x)=> PADL + (x - vw.xMin)/(vw.xMax - vw.xMin)*iw;
     const LY = (l)=> PADT + (LMAX - clamp(l,LMIN,LMAX))/(LMAX-LMIN)*ih;
 
+    // 面板矮（手机）时隔一档，免得 1e-9 / 1e-12 挤成一团
+    const lstep = ih < 52 ? 6 : 3;
+
     // 网格
     ctx.strokeStyle = '#182130';
     ctx.lineWidth = 1;
     ctx.textAlign = 'right';
-    for(let e=LMAX; e>=LMIN; e-=3){
+    for(let e=LMAX; e>=LMIN; e-=lstep){
       const py = Math.round(LY(e))+0.5;
       ctx.beginPath(); ctx.moveTo(PADL, py); ctx.lineTo(PADL+iw, py); ctx.stroke();
     }
@@ -1133,7 +1145,7 @@
     ctx.font = '9px ui-monospace, Menlo, monospace';
     ctx.fillStyle = '#586880';
     ctx.textAlign = 'right';
-    for(let e=LMAX; e>=LMIN; e-=3){
+    for(let e=LMAX; e>=LMIN; e-=lstep){
       ctx.fillText('1e'+e, PADL-8, Math.round(LY(e))+3);
     }
   }
@@ -1221,14 +1233,16 @@
       const h = ai*hm1 + hm2;
       const k = ai*km1 + km2;
       if(k > maxDen) break;
-      if(k > 0 && Math.abs(a - h/k) < 1e-10*Math.max(1,a)) return {p:h*sg, q:k};
+      if(k > 0 && h > 0 && Math.abs(a - h/k) < 1e-10*Math.max(a, 1e-6)) return {p:h*sg, q:k};
       hm2 = hm1; hm1 = h;
       km2 = km1; km1 = k;
       const fr = b - ai;
       if(fr < 1e-13) break;
       b = 1/fr;
     }
-    if(km1 > 0 && Math.abs(a - hm1/km1) < 1e-9*Math.max(1,a)) return {p:hm1*sg, q:km1};
+    // 用相对误差判定，且分子不能为 0：否则 4.5e-10 这种小系数会被当成 0/1，
+    // 渲染成 "0(x−2)^17"
+    if(km1 > 0 && hm1 > 0 && Math.abs(a - hm1/km1) < 1e-9*a) return {p:hm1*sg, q:km1};
     return null;
   }
 
@@ -1255,17 +1269,61 @@
     return String(parseFloat(b.toFixed(3)));
   }
 
+  // eˣ / sin / cos 在 x₀≠0 时系数是无理数，但能写成 sin x₀、cos x₀、e^x₀ 的符号形式。
+  // 返回该阶的"符号头部"，null 表示走数值/分数路径。
+  function symHead(fid, x0, k){
+    if(Math.abs(x0) < 1e-12) return null;          // x₀=0 走麦克劳林分支（1/k! 已是干净形式）
+    const arg = (v)=> (v < 0 ? '(−' + argText(-v).replace('−','') + ')' : argText(v));
+    if(fid === 'exp'){
+      if(Math.abs(x0 - 1) < 1e-12) return '<i>e</i>';
+      return '<i>e</i><sup>' + (x0 < 0 ? '−' + argText(-x0).replace('−','') : argText(x0)) + '</sup>';
+    }
+    if(fid === 'sin' || fid === 'cos'){
+      const m = ((k % 4) + 4) % 4;
+      const S = '<span class="fx">sin</span>&thinsp;' + arg(x0);
+      const C = '<span class="fx">cos</span>&thinsp;' + arg(x0);
+      if(fid === 'sin') return (m % 2 === 0) ? S : C;
+      return (m % 2 === 0) ? C : S;
+    }
+    return null;
+  }
+  // 该阶符号项的额外负号（sin/cos 的相位导致）
+  function symNeg(fid, x0, k){
+    const m = ((k % 4) + 4) % 4;
+    if(fid === 'sin') return (m === 2 || m === 3) ? -1 : 1;
+    if(fid === 'cos') return (m === 1 || m === 2) ? -1 : 1;
+    return 1;
+  }
+
   function buildFormula(coefs, x0, n, fid){
     let out = '';
     let first = true;
     for(let k=0;k<=n;k++){
       const c = coefs[k];
-      if(!Number.isFinite(c) || Math.abs(c) < 1e-13) continue;
+      if(!Number.isFinite(c) || Math.abs(c) < 1e-11) continue;
 
       // ln(1+x) 的常数项是无理数，写成 ln(1+x₀)
       if(fid === 'ln' && k === 0){
         out += (first ? '' : ' + ') + 'ln&thinsp;' + argText(1 + x0);
         first = false;
+        continue;
+      }
+
+      // 符号系数优先：sin 1、cos 1、e² 这类写法比小数精确且可读
+      const sym = symHead(fid, x0, k);
+      if(sym){
+        let term;
+        if(k === 0)      term = sym;
+        else if(k === 1) term = sym + '·' + shiftBase(x0, 1);
+        else             term = sym + fracRawHTML(shiftBase(x0, k), k + '!');
+        const sneg = symNeg(fid, x0, k) < 0;
+        // 空格留在 span 外 = 只允许在运算符前换行，运算符永远跟着自己的项
+        if(first){
+          out += '<span class="term">' + (sneg ? '−' : '') + term + '</span>';
+          first = false;
+        }else{
+          out += ' <span class="term">' + (sneg ? '−' : '+') + ' ' + term + '</span>';
+        }
         continue;
       }
 
@@ -1286,10 +1344,10 @@
         }
       }
       if(first){
-        out += (neg ? '−' : '') + term;
+        out += '<span class="term">' + (neg ? '−' : '') + term + '</span>';
         first = false;
       }else{
-        out += (neg ? ' − ' : ' + ') + term;
+        out += ' <span class="term">' + (neg ? '−' : '+') + ' ' + term + '</span>';
       }
     }
     if(first) out = '0';
