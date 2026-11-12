@@ -26,6 +26,8 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
+  /* --vh 由脚本按 visualViewport 高度写入，解决 iPad Safari 工具栏导致的 100vh 溢出 */
+  :root{--vh:1vh}
   body{
     background:var(--bg);
     color:var(--tx);
@@ -48,6 +50,8 @@
     display:grid;
     grid-template-columns:296px 1fr;
     height:100vh;
+    height:calc(var(--vh, 1vh) * 100);
+    height:100dvh;
   }
 
   /* ---------- 侧栏 ---------- */
@@ -187,7 +191,7 @@
   .canvasWrap{
     position:relative;
     flex:1 1 auto;
-    min-height:200px;
+    min-height:150px;
     touch-action:none;
     cursor:crosshair;
   }
@@ -277,12 +281,17 @@
   /* 表达式 */
   .expr{
     flex:none;
+    display:flex;
+    flex-direction:column;
     border-top:1px solid var(--line);
     background:rgba(17,22,31,.62);
     padding:13px 22px 15px;
     max-height:230px;
     overflow-y:auto;
+    overscroll-behavior:contain;
   }
+  .expr .exprTop{margin-top:auto}
+  .expr .formula{margin-bottom:auto}
   .expr::-webkit-scrollbar{width:7px}
   .expr::-webkit-scrollbar-thumb{background:#232c3a;border-radius:4px}
   .exprTop{
@@ -292,6 +301,11 @@
   .exprTop .t{
     font-family:var(--mono); font-size:9.5px; letter-spacing:.13em;
     text-transform:uppercase; color:var(--tx3);
+  }
+  .exprTop #stdHint{
+    min-width:0; max-width:100%;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    text-align:right;
   }
   .exprTop .badge{
     font-family:var(--mono); font-size:10px;
@@ -319,10 +333,17 @@
   .fr .fd{padding:0 3px}
   .fr sup{font-size:.8em}
 
-  /* 中等宽度 */
+  /* 中等宽度（iPad 横竖屏、小笔记本）：压缩画布，保证展开式在首屏 */
   @media (max-width:1180px){
-    .shell{grid-template-columns:256px 1fr}
-    aside{padding:16px 13px 24px}
+    .shell{grid-template-columns:236px 1fr}
+    aside{padding:15px 12px 22px; gap:16px}
+    .canvasWrap{max-height:44vh; min-height:170px}
+    .errWrap{height:100px}
+    .expr{flex:1 1 auto; max-height:none; padding:11px 18px 13px}
+    .formula{font-size:16.5px; line-height:2.35}
+    .hint{display:none}
+    .exprTop{row-gap:3px}
+    .exprTop #stdHint{flex:1 0 100%; text-align:right; font-size:9px}
   }
 
   /* 手机 */
@@ -345,7 +366,7 @@
     .stat .v{font-size:11px}
     .note{display:none}
     main{height:auto; overflow:visible}
-    .canvasWrap{flex:none; height:47vh; min-height:240px}
+    .canvasWrap{flex:none; height:37vh; min-height:180px; max-height:none}
     .errWrap{height:92px}
     .expr{max-height:none; padding:12px 14px 14px}
     .formula{font-size:15.5px; line-height:2.6}
@@ -356,11 +377,11 @@
   }
 
   /* 矮屏（横屏手机等） */
-  @media (max-height:520px) and (min-width:701px){
-    .errWrap{height:84px}
-    .expr{max-height:110px; padding:9px 16px 11px}
-    .formula{font-size:15px; line-height:2.4}
-    .canvasWrap{min-height:150px}
+  @media (max-height:620px) and (min-width:701px){
+    .errWrap{height:80px}
+    .expr{padding:8px 16px 10px}
+    .formula{font-size:14.5px; line-height:2.1}
+    .canvasWrap{max-height:none; min-height:120px}
   }
 </style>
 </head>
@@ -1222,7 +1243,9 @@
   }
 
   function coefText(av){
-    const f = toFrac(av, 50000);
+    // 分母上限 9999 且要求逼近误差 <1e-10：能还原 1/3、1/18、1/324、1/1215 这类
+    // 可读分数，同时拒绝无理系数（如 sin1 换成 39211/46717 那种假精度）
+    const f = toFrac(av, 9999);
     if(f) return fracHTML(Math.abs(f.p), f.q);
     return htmlNum(av);
   }
@@ -1467,6 +1490,19 @@
   }
 
   /* ================= 启动 ================= */
+  /* ===== 可视高度：iPad Safari 的 100vh 含工具栏高度，必须用实际可视区 ===== */
+  function syncViewportHeight(){
+    const vv = window.visualViewport;
+    const h = (vv && vv.height) || window.innerHeight || document.documentElement.clientHeight;
+    if(h > 0) document.documentElement.style.setProperty('--vh', (h/100) + 'px');
+  }
+  syncViewportHeight();
+  window.addEventListener('resize', syncViewportHeight, {passive:true});
+  window.addEventListener('orientationchange', ()=>{ syncViewportHeight(); setTimeout(syncViewportHeight, 260); });
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', syncViewportHeight, {passive:true});
+  }
+
   buildFuncs();
   buildChips();
   applyHash();
