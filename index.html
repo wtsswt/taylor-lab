@@ -396,14 +396,12 @@
   /* ---------- 署名 ---------- */
   .site-footer{
     flex:none;
-    padding:7px 16px calc(7px + env(safe-area-inset-bottom, 0px));
+    padding:5px 16px calc(5px + env(safe-area-inset-bottom, 0px));
     text-align:center;
     font-size:11px;
     line-height:1.5;
     letter-spacing:.02em;
     color:var(--tx2);
-    background:var(--bg);
-    border-top:1px solid var(--line);
   }
   /* 桌面端：满屏 flex 布局，让 shell 让出署名这一行（高度沿用 --vh/100dvh 的取值，iPad 上不倒退） */
   @media (min-width:701px){
